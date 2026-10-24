@@ -27,9 +27,16 @@ final class Engine {
 	 */
 	public static function contexts() {
 		$contexts = array(
-			'comment'   => __( 'Comments', 'wp-spam-protecter' ),
-			'review'    => __( 'Product reviews', 'wp-spam-protecter' ),
-			'trackback' => __( 'Trackbacks and pingbacks', 'wp-spam-protecter' ),
+			'comment'       => __( 'Comments', 'wp-spam-protecter' ),
+			'review'        => __( 'Product reviews', 'wp-spam-protecter' ),
+			'trackback'     => __( 'Trackbacks and pingbacks', 'wp-spam-protecter' ),
+			'registration'  => __( 'Registration', 'wp-spam-protecter' ),
+			'lost_password' => __( 'Lost password', 'wp-spam-protecter' ),
+			'login'         => __( 'Login', 'wp-spam-protecter' ),
+			'signup'        => __( 'Network sign-up', 'wp-spam-protecter' ),
+			'wc_register'   => __( 'WooCommerce registration', 'wp-spam-protecter' ),
+			'wc_login'      => __( 'WooCommerce login', 'wp-spam-protecter' ),
+			'wc_checkout'   => __( 'WooCommerce checkout', 'wp-spam-protecter' ),
 		);
 		/**
 		 * Filters the contexts (kinds of forms) ShieldCraft knows. Add one to protect a custom form

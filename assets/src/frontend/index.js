@@ -74,9 +74,29 @@ function onInteract( event ) {
 	}
 }
 
+// Forms added later (pop-ups, forms loaded with AJAX) get tokens too.
+function watch() {
+	let timer = 0;
+	new window.MutationObserver( ( mutations ) => {
+		const added = mutations.some( ( mutation ) =>
+			Array.from( mutation.addedNodes ).some(
+				( node ) =>
+					node.nodeType === 1 &&
+					( node.matches( '[data-shieldcraft]' ) ||
+						node.querySelector( '[data-shieldcraft]' ) )
+			)
+		);
+		if ( added ) {
+			window.clearTimeout( timer );
+			timer = window.setTimeout( () => refresh(), 100 );
+		}
+	} ).observe( document.body, { childList: true, subtree: true } );
+}
+
 function start() {
 	refresh();
 	document.addEventListener( 'focusin', onInteract );
+	watch();
 	window.shieldcraft = {
 		refresh,
 		protect: ( form ) => refresh( form ),

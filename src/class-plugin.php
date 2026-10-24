@@ -32,6 +32,8 @@ final class Plugin {
 		Front\Assets::register();
 		Log\Privacy::register();
 		Areas\Comments::register();
+		Areas\Account::register();
+		add_action( 'plugins_loaded', array( Integrations\WooCommerce::class, 'register' ), 20 );
 		add_action( 'rest_api_init', array( Rest\Token_Controller::class, 'register_routes' ) );
 
 		/**

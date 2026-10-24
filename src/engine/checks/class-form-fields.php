@@ -20,6 +20,11 @@ use ShieldCraft\Settings;
 final class Form_Fields implements Check {
 
 	/**
+	 * Forms people fill in within a second or two (a password manager fills a login form at once).
+	 */
+	const QUICK = array( 'login', 'wc_login' );
+
+	/**
 	 * Run.
 	 *
 	 * @param Submission $submission Submission.
@@ -51,13 +56,14 @@ final class Form_Fields implements Check {
 			return;
 		}
 		if ( $settings['time_trap'] ) {
+			$min = in_array( $submission->context, self::QUICK, true ) ? min( 1, $settings['min_seconds'] ) : $settings['min_seconds'];
 			/**
 			 * Filters the minimum time, in seconds, between loading a form and sending it.
 			 *
-			 * @param int    $seconds Seconds (from the settings).
+			 * @param int    $seconds Seconds (from the settings; at most 1 for login forms).
 			 * @param string $context Context.
 			 */
-			$min = (int) apply_filters( 'shieldcraft_min_seconds', $settings['min_seconds'], $submission->context );
+			$min = (int) apply_filters( 'shieldcraft_min_seconds', $min, $submission->context );
 			if ( $age < $min ) {
 				/* translators: %d: seconds. */
 				$verdict->add( 'too_fast', Verdict::SPAM, sprintf( __( 'Sent after %d seconds', 'wp-spam-protecter' ), $age ) );

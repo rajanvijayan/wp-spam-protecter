@@ -23,6 +23,7 @@ final class Settings {
 		'comments_spam'       => array( 'spam', 'reject' ),
 		'comments_suspicious' => array( 'hold', 'spam', 'allow' ),
 		'trackbacks'          => array( 'check', 'block', 'allow' ),
+		'forms_suspicious'    => array( 'block', 'allow' ),
 		'ip_header'           => array( '', 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP' ),
 	);
 
@@ -92,6 +93,18 @@ final class Settings {
 			'comments_spam'       => 'spam',
 			'comments_suspicious' => 'hold',
 			'trackbacks'          => 'check',
+			// Account forms.
+			'registration'        => true,
+			'lost_password'       => true,
+			// Off by default: a custom login form without ShieldCraft's fields would be refused.
+			'login'               => false,
+			'signup'              => true,
+			// WooCommerce.
+			'wc_register'         => true,
+			'wc_login'            => false,
+			'wc_checkout'         => true,
+			// Forms that cannot hold a message for moderation: what to do with suspicious ones.
+			'forms_suspicious'    => 'block',
 			// Log and privacy.
 			'retention_days'      => 30,
 			'store_ip'            => false,
