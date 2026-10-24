@@ -1,31 +1,33 @@
 <?php
-
 /**
- * Fired when the plugin is uninstalled.
+ * Uninstall: remove ShieldCraft's options, log table, comment notes and scheduled clean-up.
  *
- * When populating this file, consider the following flow
- * of control:
- *
- * - This method should be static
- * - Check if the $_REQUEST content actually is the plugin name
- * - Run an admin referrer check to make sure it goes through authentication
- * - Verify the output of $_GET makes sense
- * - Repeat with other user roles. Best directly by using the links/query string parameters.
- * - Repeat things for multisite. Once for a single site in the network, once sitewide.
- *
- * This file may be updated more in future version of the Boilerplate; however, this is the
- * general skeleton and outline for how the file should work.
- *
- * For more information, see the following discussion:
- * https://github.com/tommcfarlin/WordPress-Plugin-Boilerplate/pull/123#issuecomment-28541913
- *
- * @link       http://wpsmartcare.com
- * @since      1.0.0
- *
- * @package    Wp_Spam_Protecter
+ * @package ShieldCraft
  */
 
-// If uninstall not called from WordPress, then exit.
-if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
-	exit;
+defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
+
+/**
+ * Remove ShieldCraft's data from the current site.
+ */
+function shieldcraft_uninstall_site() {
+	global $wpdb;
+	foreach ( array( 'shieldcraft_settings', 'shieldcraft_secret', 'shieldcraft_db_version' ) as $shieldcraft_option ) {
+		delete_option( $shieldcraft_option );
+	}
+	wp_clear_scheduled_hook( 'shieldcraft_daily' );
+	delete_metadata( 'comment', 0, '_shieldcraft', '', true );
+	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}shieldcraft_log" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- fixed table name.
+	// Rate limit and duplicate counters expire on their own; remove the stored ones now.
+	$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\_transient\_shieldcraft\_%' OR option_name LIKE '\_transient\_timeout\_shieldcraft\_%'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+}
+
+if ( is_multisite() ) {
+	foreach ( get_sites( array( 'fields' => 'ids' ) ) as $shieldcraft_site ) {
+		switch_to_blog( $shieldcraft_site );
+		shieldcraft_uninstall_site();
+		restore_current_blog();
+	}
+} else {
+	shieldcraft_uninstall_site();
 }
