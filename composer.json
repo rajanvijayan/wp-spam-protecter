@@ -26,9 +26,6 @@
     "autoload": {
         "classmap": [
             "src/"
-        ],
-        "files": [
-            "src/api/functions.php"
         ]
     },
     "scripts": {

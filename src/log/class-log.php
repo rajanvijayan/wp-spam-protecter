@@ -34,7 +34,7 @@ final class Log {
 	public static function create_table() {
 		global $wpdb;
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-		$table   = self::table();
+		$table   = esc_sql( self::table() );
 		$charset = $wpdb->get_charset_collate();
 		dbDelta(
 			"CREATE TABLE {$table} (
@@ -126,7 +126,7 @@ final class Log {
 	 */
 	public static function get( $id ) {
 		global $wpdb;
-		$table = self::table();
+		$table = esc_sql( self::table() );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- custom table name.
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ), ARRAY_A );
 		return $row ? $row : null;
@@ -139,7 +139,7 @@ final class Log {
 	 */
 	public static function purge() {
 		global $wpdb;
-		$table  = self::table();
+		$table  = esc_sql( self::table() );
 		$before = gmdate( 'Y-m-d H:i:s', time() - Settings::get( 'retention_days' ) * DAY_IN_SECONDS );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- custom table name.
 		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE created < %s", $before ) );
@@ -159,7 +159,7 @@ final class Log {
 		if ( '' === $hash ) {
 			return array();
 		}
-		$table = self::table();
+		$table = esc_sql( self::table() );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- custom table name.
 		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE email_hash = %s ORDER BY id DESC LIMIT %d OFFSET %d", $hash, $limit, $offset ), ARRAY_A );
 	}
@@ -178,5 +178,164 @@ final class Log {
 		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
 		return (int) $wpdb->delete( self::table(), array( 'email_hash' => $hash ) );
+	}
+	/**
+	 * Rows, newest first.
+	 *
+	 * @param array $args { context, verdict, search (name or message), page, per_page }.
+	 * @return array { rows, total }
+	 */
+	public static function query( array $args = array() ) {
+		global $wpdb;
+		$args  = wp_parse_args(
+			$args,
+			array(
+				'context'  => '',
+				'verdict'  => '',
+				'search'   => '',
+				'page'     => 1,
+				'per_page' => 20,
+			)
+		);
+		$where = array( '1 = %d' );
+		$vars  = array( 1 );
+		if ( '' !== $args['context'] ) {
+			$where[] = 'context = %s';
+			$vars[]  = (string) $args['context'];
+		}
+		if ( '' !== $args['verdict'] ) {
+			$where[] = 'verdict = %s';
+			$vars[]  = (string) $args['verdict'];
+		}
+		if ( '' !== $args['search'] ) {
+			$like    = '%' . $wpdb->esc_like( (string) $args['search'] ) . '%';
+			$where[] = '(name LIKE %s OR excerpt LIKE %s)';
+			$vars[]  = $like;
+			$vars[]  = $like;
+		}
+		$per_page = max( 1, min( 100, (int) $args['per_page'] ) );
+		$offset   = ( max( 1, (int) $args['page'] ) - 1 ) * $per_page;
+		$table    = esc_sql( self::table() );
+		$sql      = implode( ' AND ', $where );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- custom table; $sql holds placeholders only, filled from $vars.
+		$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE {$sql}", $vars ) );
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE {$sql} ORDER BY id DESC LIMIT %d OFFSET %d", array_merge( $vars, array( $per_page, $offset ) ) ), ARRAY_A );
+		// phpcs:enable
+		return array(
+			'rows'  => array_map( array( self::class, 'present' ), (array) $rows ),
+			'total' => $total,
+		);
+	}
+
+	/**
+	 * A row as the admin shows it: no hashes, reasons decoded.
+	 *
+	 * @param array $row Row.
+	 * @return array
+	 */
+	public static function present( array $row ) {
+		$details = json_decode( (string) $row['details'], true );
+		return array(
+			'id'        => (int) $row['id'],
+			'created'   => mysql_to_rfc3339( $row['created'] ),
+			'context'   => $row['context'],
+			'form'      => $row['form'],
+			'verdict'   => $row['verdict'],
+			'reasons'   => is_array( $details ) ? $details : array(),
+			'name'      => $row['name'],
+			'excerpt'   => $row['excerpt'],
+			'agent'     => $row['agent'],
+			'ip'        => $row['ip'],
+			'object_id' => (int) $row['object_id'],
+			'status'    => $row['status'],
+			'link'      => self::object_link( $row ),
+		);
+	}
+
+	/**
+	 * Admin link to what a row is about (the comment), or ''.
+	 *
+	 * @param array $row Row.
+	 * @return string
+	 */
+	private static function object_link( array $row ) {
+		if ( (int) $row['object_id'] && in_array( $row['context'], array( 'comment', 'review', 'trackback' ), true ) && get_comment( (int) $row['object_id'] ) ) {
+			return admin_url( 'comment.php?action=editcomment&c=' . (int) $row['object_id'] );
+		}
+		return '';
+	}
+
+	/**
+	 * Counts for the dashboard.
+	 *
+	 * @param int $days Days back.
+	 * @return array { total, spam, suspicious, contexts: { context: n }, reasons: { check: n }, days: { Y-m-d: n } }
+	 */
+	public static function stats( $days = 30 ) {
+		global $wpdb;
+		$table = esc_sql( self::table() );
+		$since = gmdate( 'Y-m-d H:i:s', time() - (int) $days * DAY_IN_SECONDS );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- custom table name.
+		$by_context = $wpdb->get_results( $wpdb->prepare( "SELECT context, verdict, COUNT(*) AS n FROM {$table} WHERE created >= %s GROUP BY context, verdict", $since ), ARRAY_A );
+		$by_day     = $wpdb->get_results( $wpdb->prepare( "SELECT SUBSTR(created, 1, 10) AS day, COUNT(*) AS n FROM {$table} WHERE created >= %s GROUP BY day", $since ), ARRAY_A );
+		$reasons    = $wpdb->get_col( $wpdb->prepare( "SELECT reasons FROM {$table} WHERE created >= %s ORDER BY id DESC LIMIT 5000", $since ) );
+		// phpcs:enable
+		$out = array(
+			'total'      => 0,
+			'spam'       => 0,
+			'suspicious' => 0,
+			'contexts'   => array(),
+			'reasons'    => array(),
+			'days'       => array(),
+		);
+		foreach ( (array) $by_context as $row ) {
+			$n                                  = (int) $row['n'];
+			$out['total']                      += $n;
+			$out[ $row['verdict'] ]             = ( isset( $out[ $row['verdict'] ] ) ? $out[ $row['verdict'] ] : 0 ) + $n;
+			$out['contexts'][ $row['context'] ] = ( isset( $out['contexts'][ $row['context'] ] ) ? $out['contexts'][ $row['context'] ] : 0 ) + $n;
+		}
+		foreach ( (array) $reasons as $codes ) {
+			foreach ( array_filter( explode( ',', (string) $codes ) ) as $code ) {
+				$out['reasons'][ $code ] = ( isset( $out['reasons'][ $code ] ) ? $out['reasons'][ $code ] : 0 ) + 1;
+			}
+		}
+		arsort( $out['contexts'] );
+		arsort( $out['reasons'] );
+		for ( $i = (int) $days - 1; $i >= 0; $i-- ) {
+			$out['days'][ gmdate( 'Y-m-d', time() - $i * DAY_IN_SECONDS ) ] = 0;
+		}
+		foreach ( (array) $by_day as $row ) {
+			if ( isset( $out['days'][ $row['day'] ] ) ) {
+				$out['days'][ $row['day'] ] = (int) $row['n'];
+			}
+		}
+		$out['contexts'] = (object) $out['contexts'];
+		$out['reasons']  = (object) $out['reasons'];
+		$out['days']     = (object) $out['days'];
+		return $out;
+	}
+
+	/**
+	 * Update a row's status.
+	 *
+	 * @param int    $id     Row ID.
+	 * @param string $status Status.
+	 */
+	public static function set_status( $id, $status ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+		$wpdb->update( self::table(), array( 'status' => sanitize_key( $status ) ), array( 'id' => (int) $id ) );
+	}
+
+	/**
+	 * Delete a row.
+	 *
+	 * @param int $id Row ID.
+	 * @return bool
+	 */
+	public static function delete( $id ) {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table.
+		return (bool) $wpdb->delete( self::table(), array( 'id' => (int) $id ) );
 	}
 }

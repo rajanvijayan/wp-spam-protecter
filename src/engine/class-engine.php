@@ -12,6 +12,7 @@ use ShieldCraft\Engine\Checks\Content;
 use ShieldCraft\Engine\Checks\Form_Fields;
 use ShieldCraft\Engine\Checks\Repetition;
 use ShieldCraft\Log\Log;
+use ShieldCraft\Log\Senders;
 use ShieldCraft\Settings;
 
 /**
@@ -129,6 +130,10 @@ final class Engine {
 			}
 		}
 		if ( Request::ip_in( $submission->ip, Settings::lines( 'allowed_ips' ) ) ) {
+			return true;
+		}
+		// Senders marked "Not spam" in the log.
+		if ( Senders::has( Senders::ALLOWED, array( Request::hash( $submission->ip ), Request::hash( $submission->email ) ) ) ) {
 			return true;
 		}
 		return '' !== $submission->email && Content::email_in( $submission->email, Settings::lines( 'allowed_emails' ) );

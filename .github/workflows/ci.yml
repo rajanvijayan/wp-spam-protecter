@@ -75,10 +75,10 @@ jobs:
         run: find . -name '*.php' -not -path './node_modules/*' -not -path './tests/*' -not -path './bin/*' -print0 | xargs -0 -n1 -P4 php -d display_errors=stderr -l > /dev/null
 
       - name: Check built scripts
-        run: for f in frontend.js frontend.asset.php; do test -s build/$f || { echo "::error::build/$f is missing"; exit 1; }; done
+        run: for f in frontend.js frontend.asset.php admin.js admin.css admin.asset.php; do test -s build/$f || { echo "::error::build/$f is missing"; exit 1; }; done
 
       - name: Smoke-test autoloader
-        run: php -r 'require "vendor/autoload.php"; foreach (["ShieldCraft\\Plugin", "ShieldCraft\\Engine\\Engine", "ShieldCraft\\Log\\Log"] as $c) { if (!class_exists($c)) { fwrite(STDERR, "missing $c\n"); exit(1); } }'
+        run: php -r 'require "vendor/autoload.php"; foreach (["ShieldCraft\\Plugin", "ShieldCraft\\Engine\\Engine", "ShieldCraft\\Log\\Log", "ShieldCraft\\Admin\\Admin"] as $c) { if (!class_exists($c)) { fwrite(STDERR, "missing $c\n"); exit(1); } }'
 
   phpunit:
     runs-on: ubuntu-latest

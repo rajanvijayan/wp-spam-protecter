@@ -10,6 +10,7 @@ namespace ShieldCraft\Engine\Checks;
 use ShieldCraft\Engine\Request;
 use ShieldCraft\Engine\Submission;
 use ShieldCraft\Engine\Verdict;
+use ShieldCraft\Log\Senders;
 use ShieldCraft\Settings;
 
 /**
@@ -46,6 +47,11 @@ final class Content implements Check {
 
 		if ( Request::ip_in( $submission->ip, Settings::lines( 'blocked_ips' ) ) ) {
 			$verdict->add( 'blocked_ip', Verdict::SPAM );
+		}
+
+		// Senders blocked from the log.
+		if ( Senders::has( Senders::BLOCKED, array( Request::hash( $submission->ip ), Request::hash( $submission->email ) ) ) ) {
+			$verdict->add( 'blocked_sender', Verdict::SPAM );
 		}
 
 		if ( $settings['blocked_scripts'] ) {

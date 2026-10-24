@@ -20,6 +20,8 @@
  * @package ShieldCraft
  */
 
+defined( 'ABSPATH' ) || exit;
+
 use ShieldCraft\Engine\Engine;
 use ShieldCraft\Engine\Fields;
 use ShieldCraft\Engine\Submission;

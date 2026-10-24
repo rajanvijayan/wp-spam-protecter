@@ -12,7 +12,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
  */
 function shieldcraft_uninstall_site() {
 	global $wpdb;
-	foreach ( array( 'shieldcraft_settings', 'shieldcraft_secret', 'shieldcraft_db_version' ) as $shieldcraft_option ) {
+	foreach ( array( 'shieldcraft_settings', 'shieldcraft_secret', 'shieldcraft_db_version', 'shieldcraft_allowed_senders', 'shieldcraft_blocked_senders' ) as $shieldcraft_option ) {
 		delete_option( $shieldcraft_option );
 	}
 	wp_clear_scheduled_hook( 'shieldcraft_daily' );
