@@ -1,7 +1,8 @@
 <?php
 /**
  * PHPUnit bootstrap. Set WP_TESTS_DIR to the WordPress test library (bin/install-wp-tests.sh).
- * Optional plugins are loaded when their folder is given: WC_DIR (WooCommerce).
+ * Optional plugins are loaded when their folder is given: WC_DIR (WooCommerce), CF7_DIR (Contact
+ * Form 7), WPFORMS_DIR (WPForms Lite) and FLUENTFORM_DIR (Fluent Forms).
  *
  * @package ShieldCraft
  */
@@ -19,9 +20,18 @@ require_once dirname( __DIR__ ) . '/vendor/yoast/phpunit-polyfills/phpunitpolyfi
 require_once $shieldcraft_tests_dir . '/includes/functions.php';
 
 $shieldcraft_plugins = array();
-$shieldcraft_wc_dir  = getenv( 'WC_DIR' );
-if ( $shieldcraft_wc_dir && file_exists( $shieldcraft_wc_dir . '/woocommerce.php' ) ) {
-	$shieldcraft_plugins[] = $shieldcraft_wc_dir . '/woocommerce.php';
+foreach (
+	array(
+		'WC_DIR'         => 'woocommerce.php',
+		'CF7_DIR'        => 'wp-contact-form-7.php',
+		'WPFORMS_DIR'    => 'wpforms.php',
+		'FLUENTFORM_DIR' => 'fluentform.php',
+	) as $shieldcraft_env => $shieldcraft_main
+) {
+	$shieldcraft_dir = getenv( $shieldcraft_env );
+	if ( $shieldcraft_dir && file_exists( $shieldcraft_dir . '/' . $shieldcraft_main ) ) {
+		$shieldcraft_plugins[] = $shieldcraft_dir . '/' . $shieldcraft_main;
+	}
 }
 
 tests_add_filter(

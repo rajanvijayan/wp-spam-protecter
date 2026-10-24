@@ -86,14 +86,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Oldest supported pair and newest pair.
+          # Oldest supported pair and newest pair, plus a multisite run.
           # WooCommerce 9.4 is the last release that supports WordPress 6.5.
           - php: '7.4'
             wp: '6.5'
             wc: '9.4.0'
+            forms: false
+          # Contact Form 7 needs the newest WordPress and PHP, so the form plugins load here only.
           - php: '8.3'
             wp: 'latest'
             wc: 'latest-stable'
+            forms: true
+          - php: '8.3'
+            wp: 'latest'
+            wc: 'latest-stable'
+            forms: false
+            multisite: '1'
     services:
       mysql:
         image: mysql:8.0
@@ -122,8 +130,20 @@ jobs:
           curl -sSL -o /tmp/woocommerce.zip "https://downloads.wordpress.org/plugin/woocommerce.${{ matrix.wc }}.zip"
           unzip -q /tmp/woocommerce.zip -d /tmp
 
+      - name: Install form plugins
+        if: ${{ matrix.forms }}
+        run: |
+          for slug in contact-form-7 wpforms-lite fluentform; do
+            curl -sSL -o /tmp/$slug.zip "https://downloads.wordpress.org/plugin/$slug.latest-stable.zip"
+            unzip -q /tmp/$slug.zip -d /tmp
+          done
+
       - name: PHPUnit
         run: vendor/bin/phpunit
         env:
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WC_DIR: /tmp/woocommerce
+          CF7_DIR: ${{ matrix.forms && '/tmp/contact-form-7' || '' }}
+          WPFORMS_DIR: ${{ matrix.forms && '/tmp/wpforms-lite' || '' }}
+          FLUENTFORM_DIR: ${{ matrix.forms && '/tmp/fluentform' || '' }}
+          WP_MULTISITE: ${{ matrix.multisite || '0' }}

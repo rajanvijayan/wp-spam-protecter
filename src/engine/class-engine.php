@@ -37,6 +37,12 @@ final class Engine {
 			'wc_register'   => __( 'WooCommerce registration', 'wp-spam-protecter' ),
 			'wc_login'      => __( 'WooCommerce login', 'wp-spam-protecter' ),
 			'wc_checkout'   => __( 'WooCommerce checkout', 'wp-spam-protecter' ),
+			'cf7'           => 'Contact Form 7',
+			'wpforms'       => 'WPForms',
+			'gravityforms'  => 'Gravity Forms',
+			'fluentforms'   => 'Fluent Forms',
+			'elementor'     => 'Elementor Pro Forms',
+			'api'           => __( 'Custom forms (API)', 'wp-spam-protecter' ),
 		);
 		/**
 		 * Filters the contexts (kinds of forms) ShieldCraft knows. Add one to protect a custom form

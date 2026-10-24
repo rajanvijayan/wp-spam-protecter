@@ -103,6 +103,12 @@ final class Settings {
 			'wc_register'         => true,
 			'wc_login'            => false,
 			'wc_checkout'         => true,
+			// Form plugins.
+			'cf7'                 => true,
+			'wpforms'             => true,
+			'gravityforms'        => true,
+			'fluentforms'         => true,
+			'elementor'           => true,
 			// Forms that cannot hold a message for moderation: what to do with suspicious ones.
 			'forms_suspicious'    => 'block',
 			// Log and privacy.

@@ -34,7 +34,9 @@ final class Plugin {
 		Areas\Comments::register();
 		Areas\Account::register();
 		add_action( 'plugins_loaded', array( Integrations\WooCommerce::class, 'register' ), 20 );
+		add_action( 'plugins_loaded', array( Integrations\Form_Plugins::class, 'register' ), 20 );
 		add_action( 'rest_api_init', array( Rest\Token_Controller::class, 'register_routes' ) );
+		add_action( 'rest_api_init', array( Rest\Check_Controller::class, 'register_routes' ) );
 
 		/**
 		 * Fires when ShieldCraft has registered its hooks (for extensions).
